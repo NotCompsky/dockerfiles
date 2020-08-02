@@ -1,13 +1,5 @@
 FROM alpine:latest
 
-ENV PATH=$PATH:/usr/local/x86_64-linux-musl/lib
-ENV CC=/usr/local/bin/x86_64-linux-musl-gcc
-ENV CXX=/usr/local/bin/x86_64-linux-musl-g++
-ENV C_INCLUDE_PATH=/usr/local/x86_64-linux-musl/include
-ENV LDFLAGS="-Wl,-Bstatic"
-ENV CFLAGS="-static"
-ENV CXXFLAGS="-static"
-
 # WARNING: -fpermissive for wangle is temporary.
 COPY static-connector.patch /static-connector.patch
 
@@ -21,6 +13,7 @@ RUN apk update \
 		libdwarf-static libdwarf-dev \
 		patch \
 		curl gettext glib \
+		autoconf automake libtool perl \
 	\
 	&& git clone https://github.com/madler/zlib \
 	&& git clone https://github.com/libunwind/libunwind \
@@ -42,8 +35,6 @@ RUN apk update \
 	\
 	&& git clone https://github.com/richfelker/musl-cross-make \
 	\
-	&& apk del git \
-	\
 	&& cd musl-cross-make \
 	&& printf "%s\n%s\n%s\n%s\n" \
 		'TARGET = x86_64-linux-musl' \
@@ -54,11 +45,17 @@ RUN apk update \
 	&& make \
 	\
 	&& cd /musl-cross-make \
-	&& make install \
-	\
-	&& apk add --no-cache autoconf automake libtool perl \
-	\
-	&& mkdir -p /musl/lib \
+	&& make install
+
+ENV PATH=$PATH:/usr/local/x86_64-linux-musl/lib
+ENV CC=/usr/local/bin/x86_64-linux-musl-gcc
+ENV CXX=/usr/local/bin/x86_64-linux-musl-g++
+ENV C_INCLUDE_PATH=/usr/local/x86_64-linux-musl/include
+ENV LDFLAGS="-Wl,-Bstatic"
+ENV CFLAGS="-static"
+ENV CXXFLAGS="-static"
+
+RUN mkdir -p /musl/lib \
 	\
 	&& cd /zlib \
 	&& cmake \
@@ -120,10 +117,6 @@ RUN apk update \
 		-DBUILD_SHARED_LIBS=OFF \
 		. \
 	&& make install \
-	\
-	\
-	&& apk add --no-cache git \
-	\
 	\
 	&& cd / \
 	&& git clone https://github.com/ARMmbed/mbedtls \
