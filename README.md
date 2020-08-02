@@ -1,1 +1,1 @@
-A collection of various Dockerfiles.
+Various Dockerfiles

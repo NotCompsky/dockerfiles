@@ -1,5 +1,16 @@
 FROM alpine:latest
 
+ENV PATH=$PATH:/usr/local/x86_64-linux-musl/lib
+ENV CC=/usr/local/bin/x86_64-linux-musl-gcc
+ENV CXX=/usr/local/bin/x86_64-linux-musl-g++
+ENV C_INCLUDE_PATH=/usr/local/x86_64-linux-musl/include
+ENV LDFLAGS="-Wl,-Bstatic"
+ENV CFLAGS="-static"
+ENV CXXFLAGS="-static"
+
+# WARNING: -fpermissive for wangle is temporary.
+COPY static-connector.patch /static-connector.patch
+
 RUN apk update \
 	&& apk add --no-cache \
 		git \
@@ -31,32 +42,18 @@ RUN apk update \
 	\
 	&& git clone https://github.com/richfelker/musl-cross-make \
 	\
-	&& apk del git
-RUN cd musl-cross-make \
+	&& apk del git \
+	\
+	&& cd musl-cross-make \
 	&& printf "%s\n%s\n%s\n%s\n" \
 		'TARGET = x86_64-linux-musl' \
 		'OUTPUT = /usr/local' \
 		'DL_CMD = curl -C - -L -o' \
 		'COMMON_CONFIG += --disable-nls CFLAGS="-g0 -O3 -flto" CXXFLAGS="-g0 -O3 -flto" LDFLAGS="-s"' \
 		> config.mak \
-	&& make
-
-ARG PATH=$PATH:/usr/local/x86_64-linux-musl/lib
-
-ARG CC=/usr/local/bin/x86_64-linux-musl-gcc
-ARG CXX=/usr/local/bin/x86_64-linux-musl-g++
-ARG C_INCLUDE_PATH=/usr/local/x86_64-linux-musl/include
-ARG LDFLAGS="-Wl,-Bstatic"
-ARG CFLAGS="-static"
-ARG CXXFLAGS="-static"
-
-# TODO: Make these ARGs ENVs instead
-# TODO: Move these before RUN command
-
-# libevent requires MbedTLS
-# not sure why we need gflags though (used by wangle/folly/fizz, but it is only for dealing with options specified on the command line, and I can guarantee that none are sent to these libraries...)
-
-RUN cd /musl-cross-make \
+	&& make \
+	\
+	&& cd /musl-cross-make \
 	&& make install \
 	\
 	&& apk add --no-cache autoconf automake libtool perl \
@@ -198,8 +195,9 @@ RUN cd /musl-cross-make \
 		-DBUILD_TESTS=OFF \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_EXE_LINKER_FLAGS=-static \
-	&& make install
-RUN mkdir /fizz/build_ \
+	&& make install \
+	\
+	&& mkdir /fizz/build_ \
 	&& cd /fizz/build_ \
 	&& cmake \
 		-Wno-dev \
@@ -209,9 +207,9 @@ RUN mkdir /fizz/build_ \
 		-DCMAKE_EXE_LINKER_FLAGS=-static \
 		-DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/zlib \
 		../fizz \
-	&& make install
-# WARNING: -fpermissive for wangle is temporary.
-RUN cd /wangle/wangle \
+	&& make install \
+	\
+	&& cd /wangle/wangle \
 	&& cmake \
 		-DCMAKE_CXX_FLAGS_RELEASE='-fpermissive' \
 		-Wno-dev -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF \
@@ -219,9 +217,9 @@ RUN cd /wangle/wangle \
 		-DCMAKE_BUILD_TYPE=Release \
 		. \
 	&& make \
-	&& make install
-COPY static-connector.patch /static-connector.patch
-RUN cd /mariadb-connector-c \
+	&& make install \
+	\
+	&& cd /mariadb-connector-c \
 	&& for f in service_sha2; do \
 		curl -s "https://raw.githubusercontent.com/MariaDB/server/10.5/include/mysql/$f.h" > "include/mysql/$f.h"; \
 	done \
