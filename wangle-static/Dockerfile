@@ -15,25 +15,25 @@ RUN apk update \
 		curl gettext glib \
 		autoconf automake libtool perl \
 	\
-	&& git clone https://github.com/madler/zlib \
-	&& git clone https://github.com/libunwind/libunwind \
-	&& git clone https://github.com/google/glog \
-	&& git clone https://github.com/google/double-conversion \
-	&& git clone https://github.com/lz4/lz4 \
-	&& git clone https://github.com/google/snappy \
-	&& git clone https://github.com/openssl/openssl \
-	&& git clone https://github.com/jedisct1/libsodium \
-	&& git clone https://github.com/fmtlib/fmt \
-	&& git clone https://github.com/gflags/gflags \
-	&& git clone https://github.com/libevent/libevent \
-	&& git clone https://github.com/curl/curl \
-	&& git clone https://github.com/facebook/zstd \
-	&& git clone https://github.com/facebook/folly \
-	&& git clone https://github.com/facebookincubator/fizz \
-	&& git clone https://github.com/facebook/wangle \
+	&& git clone --depth 1 https://github.com/madler/zlib \
+	&& git clone --depth 1 https://github.com/libunwind/libunwind \
+	&& git clone --depth 1 https://github.com/google/glog \
+	&& git clone --depth 1 https://github.com/google/double-conversion \
+	&& git clone --depth 1 https://github.com/lz4/lz4 \
+	&& git clone --depth 1 https://github.com/google/snappy \
+	&& git clone --depth 1 https://github.com/openssl/openssl \
+	&& git clone --depth 1 https://github.com/jedisct1/libsodium \
+	&& git clone --depth 1 https://github.com/fmtlib/fmt \
+	&& git clone --depth 1 https://github.com/gflags/gflags \
+	&& git clone --depth 1 https://github.com/libevent/libevent \
+	&& git clone --depth 1 https://github.com/curl/curl \
+	&& git clone --depth 1 https://github.com/facebook/zstd \
+	&& git clone --depth 1 https://github.com/facebook/folly \
+	&& git clone --depth 1 https://github.com/facebookincubator/fizz \
+	&& git clone --depth 1 https://github.com/facebook/wangle \
 	&& git clone https://github.com/mariadb-corporation/mariadb-connector-c \
 	\
-	&& git clone https://github.com/richfelker/musl-cross-make \
+	&& git clone --depth 1 https://github.com/richfelker/musl-cross-make \
 	\
 	&& cd musl-cross-make \
 	&& printf "%s\n%s\n%s\n%s\n" \
@@ -119,7 +119,7 @@ RUN mkdir -p /musl/lib \
 	&& make install \
 	\
 	&& cd / \
-	&& git clone https://github.com/ARMmbed/mbedtls \
+	&& git clone --depth 1 https://github.com/ARMmbed/mbedtls \
 	&& mkdir /mbedtls/build_dir \
 	&& cd /mbedtls/build_dir \
 	&& cmake \
