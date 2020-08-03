@@ -20,6 +20,11 @@ FROM notcompsky/wangle-static:latest
 
 # NOTE: When pkg-config claims it cannot find a package, it probably means that it cannot find a library that package requires. Look at the log: tail ffbuild/config.log
 
+# WARNING: Maybe remove enable-demuxer? Can't remember if I needed that removed to compile it
+# --enable-demuxer=mov,m4v,matroska,mp4 \
+
+# && sed 's/ -lgcc_s / /g' /usr/local/lib/pkgconfig/x265.pc
+
 ARG PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 
 ENV PATH=$PATH:/usr/local/x86_64-linux-musl/lib
@@ -40,7 +45,7 @@ RUN apk add --no-cache \
 	\
 	&& git clone --depth 1 https://github.com/webmproject/libvpx \
 	&& cd libvpx/build \
-	&& ../configure \
+	&& LDFLAGS="-static" ../configure \
 		--disable-shared \
 		--enable-static \
 		--disable-examples \
@@ -60,7 +65,7 @@ RUN apk add --no-cache \
 	\
 	&& git clone --depth 1 https://code.videolan.org/videolan/x264.git \
 	&& cd x264 \
-	&& ./configure \
+	&& LDFLAGS="-static" ./configure \
 		--disable-cli \
 		--enable-static \
 		--disable-shared \
@@ -87,11 +92,8 @@ RUN apk add --no-cache \
 	&& cd / \
 	&& git clone --depth 1 https://github.com/FFmpeg/FFmpeg \
 	\
-	apk install --no-cache numactl-dev \
-	\
-	&& sed 's/ -lgcc_s / /g' /usr/local/lib/pkgconfig/x265.pc \
-	\
-	&& cd /FFmpeg \
+	&& apk add --no-cache numactl-dev
+RUN cd /FFmpeg \
 	&& LDFLAGS="-static" \
 		./configure \
 			--cc="$CC" \
@@ -119,7 +121,6 @@ RUN apk add --no-cache \
 			--disable-everything \
 			--disable-network \
 			--disable-autodetect \
-			--enable-demuxer=mov,m4v,matroska,mp4 \
 			--enable-protocol=file \
 			\
 			--enable-libx264 \
