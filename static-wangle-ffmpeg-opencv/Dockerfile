@@ -1,7 +1,10 @@
 FROM notcompsky/static-wangle-ffmpeg:latest
 ARG OPENCV_VERSION=4.4.0
 RUN git clone --depth 1 https://github.com/glennrp/libpng \
-	&& cd libpng \
+	&& mkdir libpng/build \
+	&& cp /usr/local/include/zlib/*.h libpng/ \
+	&& cd libpng/build \
+	&& echo "libPNG has some convoluted CMake stuff going on, so it ignores our include_directories calls" \
 	&& cmake \
 		-DPNG_SHARED=OFF \
 		-DPNG_STATIC=ON \
@@ -10,9 +13,11 @@ RUN git clone --depth 1 https://github.com/glennrp/libpng \
 		\
 		-DPNG_HARDWARE_OPTIMIZATIONS=ON \
 		\
-		-DCMAKE_C_STANDARD_INCLUDE_DIRECTORIES=/usr/local/include/zlib \
+		-DZLIB_INCLUDE_DIRS=/usr/local/include/zlib \
+		-DZLIB_LIBRARIES=/usr/local/lib/libz.a \
+		-DPNG_BUILD_ZLIB=ON \
 		\
-		. \
+		.. \
 	&& make install \
 	&& cd / \
 	&& rm -rf libpng \
