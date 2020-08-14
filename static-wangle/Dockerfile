@@ -1,21 +1,9 @@
-FROM alpine:latest
+FROM notcompsky/static:latest
 
 # WARNING: -fpermissive for wangle is temporary.
 COPY static-connector.patch /static-connector.patch
 
-RUN apk update \
-	&& apk add --no-cache \
-		git \
-		cmake make \
-		gcc g++ \
-		musl-dev musl-utils \
-		boost-static boost-dev \
-		libdwarf-static libdwarf-dev \
-		patch \
-		curl gettext glib \
-		autoconf automake libtool perl \
-	\
-	&& git clone --depth 1 https://github.com/madler/zlib \
+RUN git clone --depth 1 https://github.com/madler/zlib \
 	&& git clone --depth 1 https://github.com/libunwind/libunwind \
 	&& git clone --depth 1 https://github.com/google/glog \
 	&& git clone --depth 1 https://github.com/google/double-conversion \
@@ -33,42 +21,22 @@ RUN apk update \
 	&& git clone --depth 1 https://github.com/facebook/wangle \
 	&& git clone https://github.com/mariadb-corporation/mariadb-connector-c \
 	\
-	&& git clone --depth 1 https://github.com/richfelker/musl-cross-make \
-	\
-	&& cd musl-cross-make \
-	&& printf "%s\n%s\n%s\n%s\n" \
-		'TARGET = x86_64-linux-musl' \
-		'OUTPUT = /usr/local' \
-		'DL_CMD = curl -C - -L -o' \
-		'COMMON_CONFIG += --disable-nls CFLAGS="-g0 -O3 -flto" CXXFLAGS="-g0 -O3 -flto" LDFLAGS="-s"' \
-		> config.mak \
-	&& make \
-	\
-	&& cd /musl-cross-make \
-	&& make install
-
-ENV PATH=$PATH:/usr/local/x86_64-linux-musl/lib
-ENV CC=/usr/local/bin/x86_64-linux-musl-gcc
-ENV CXX=/usr/local/bin/x86_64-linux-musl-g++
-ENV C_INCLUDE_PATH=/usr/local/x86_64-linux-musl/include
-ENV LDFLAGS="-Wl,-Bstatic"
-ENV CFLAGS="-static"
-ENV CXXFLAGS="-static"
-
-RUN mkdir -p /musl/lib \
-	\
 	&& cd /zlib \
 	&& cmake \
 		-DCMAKE_BUILD_TYPE=Release \
+		-DAMD64=ON \
 		. \
 	&& make zlibstatic \
-	&& mv ./libz.a /musl/lib/ \
+	&& mv ./libz.a /usr/local/lib/ \
+	&& mkdir /usr/local/include/zlib \
+	&& mv *.h /usr/local/include/zlib/ \
 	\
 	&& cd /libunwind \
 	&& ./autogen.sh \
 	&& ./configure --disable-tests --disable-documentation \
-	&& make \
 	&& make install \
+	&& cd / \
+	&& rm -rf libunwind \
 	\
 	&& cd /glog \
 	&& cmake \
@@ -77,15 +45,20 @@ RUN mkdir -p /musl/lib \
 		-DCMAKE_BUILD_TYPE=Release \
 		. \
 	&& make install \
+	&& cd / \
+	&& rm -rf glog \
 	\
 	&& cd /double-conversion \
 	&& cmake -DBUILD_TESTING=OFF . \
 	&& make install \
+	&& cd / \
+	&& rm -rf double-conversion \
 	\
 	&& cd /lz4/contrib/cmake_unofficial \
 	&& cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON . \
-	&& make \
 	&& make install \
+	&& cd / \
+	&& rm -rf cmake_unofficial \
 	\
 	&& cd /snappy \
 	&& cmake \
@@ -95,10 +68,14 @@ RUN mkdir -p /musl/lib \
 		-DCMAKE_BUILD_TYPE=Release \
 		. \
 	&& make install \
+	&& cd / \
+	&& rm -rf snappy \
 	\
 	&& cd /openssl \
 	&& ./config no-ssl2 no-err no-psk no-srp -static --static \
 	&& make install_sw \
+	&& cd / \
+	&& rm -rf openssl \
 	\
 	&& cd /libsodium \
 	&& ./autogen.sh -s \
@@ -110,6 +87,8 @@ RUN mkdir -p /musl/lib \
 		--disable-debug \
 		--disable-opt \
 	&& make install \
+	&& cd / \
+	&& rm -rf libsodium \
 	\
 	&& cd /fmt \
 	&& cmake \
@@ -117,6 +96,8 @@ RUN mkdir -p /musl/lib \
 		-DBUILD_SHARED_LIBS=OFF \
 		. \
 	&& make install \
+	&& cd / \
+	&& rm -rf fmt \
 	\
 	&& cd / \
 	&& git clone --depth 1 https://github.com/ARMmbed/mbedtls \
@@ -129,6 +110,8 @@ RUN mkdir -p /musl/lib \
 		-DCMAKE_BUILD_TYPE=Release \
 		.. \
 	&& make install \
+	&& cd / \
+	&& rm -rf mbedtls \
 	\
 	&& cd /gflags \
 	&& cmake \
@@ -145,6 +128,8 @@ RUN mkdir -p /musl/lib \
 		-DCMAKE_BUILD_TYPE=Release \
 		. \
 	&& make install \
+	&& cd / \
+	&& rm -rf gflags \
 	\
 	&& cd /libevent \
 	&& cmake \
@@ -156,6 +141,8 @@ RUN mkdir -p /musl/lib \
 		-DEVENT__ENABLE_GCC_FUNCTION_SECTIONS=ON \
 		. \
 	&& make install \
+	&& cd / \
+	&& rm -rf libevent \
 	\
 	&& cd /curl \
 	&& cmake \
@@ -166,6 +153,8 @@ RUN mkdir -p /musl/lib \
 		-DENABLE_UNIX_SOCKETS=OFF \
 		. \
 	&& make install \
+	&& cd / \
+	&& rm -rf curl \
 	\
 	&& cd /zstd/build/cmake \
 	&& cmake \
@@ -178,6 +167,8 @@ RUN mkdir -p /musl/lib \
 		-DZSTD_BUILD_SHARED=OFF \
 		. \
 	&& make install \
+	&& cd / \
+	&& rm -rf zstd \
 	\
 	&& cd /folly \
 	&& sed -i 's/^add_subdirectory(folly)//g' CMakeLists.txt  \
@@ -189,6 +180,8 @@ RUN mkdir -p /musl/lib \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_EXE_LINKER_FLAGS=-static \
 	&& make install \
+	&& cd / \
+	&& rm -rf folly \
 	\
 	&& mkdir /fizz/build_ \
 	&& cd /fizz/build_ \
@@ -198,9 +191,11 @@ RUN mkdir -p /musl/lib \
 		-DBUILD_EXAMPLES=OFF \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_EXE_LINKER_FLAGS=-static \
-		-DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/zlib \
+		-DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/usr/local/include/zlib \
 		../fizz \
 	&& make install \
+	&& cd / \
+	&& rm -rf fizz \
 	\
 	&& cd /wangle/wangle \
 	&& cmake \
@@ -209,8 +204,9 @@ RUN mkdir -p /musl/lib \
 		-DCMAKE_EXE_LINKER_FLAGS=-static \
 		-DCMAKE_BUILD_TYPE=Release \
 		. \
-	&& make \
 	&& make install \
+	&& cd / \
+	&& rm -rf wangle \
 	\
 	&& cd /mariadb-connector-c \
 	&& for f in service_sha2; do \
@@ -242,4 +238,6 @@ RUN mkdir -p /musl/lib \
 		-DCLIENT_PLUGIN_PVIO_SHMEM=STATIC \
 		\
 		. \
-	&& make install
+	&& make install \
+	&& cd / \
+	&& rm -rf mariadb-connector-c

@@ -1,4 +1,4 @@
-FROM notcompsky/wangle-static:latest
+FROM notcompsky/static-wangle:latest
 
 #	&& git clone https://aomedia.googlesource.com/aom \
 #	&& mkdir aom/aom_build \
@@ -22,18 +22,6 @@ FROM notcompsky/wangle-static:latest
 
 # WARNING: Maybe remove enable-demuxer? Can't remember if I needed that removed to compile it
 # --enable-demuxer=mov,m4v,matroska,mp4 \
-
-# && sed 's/ -lgcc_s / /g' /usr/local/lib/pkgconfig/x265.pc
-
-ARG PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
-
-ENV PATH=$PATH:/usr/local/x86_64-linux-musl/lib
-ENV CC=/usr/local/bin/x86_64-linux-musl-gcc
-ENV CXX=/usr/local/bin/x86_64-linux-musl-g++
-ENV C_INCLUDE_PATH=/usr/local/x86_64-linux-musl/include
-ENV LDFLAGS="-Wl,-Bstatic"
-ENV CFLAGS="-static"
-ENV CXXFLAGS="-static"
 
 RUN apk add --no-cache \
 		bzip2-static \
@@ -62,6 +50,8 @@ RUN apk add --no-cache \
 		--enable-vp9-highbitdepth \
 		--as=yasm \
 	&& make install \
+	&& cd / \
+	&& rm -rf libvpx \
 	\
 	&& git clone --depth 1 https://code.videolan.org/videolan/x264.git \
 	&& cd x264 \
@@ -77,6 +67,8 @@ RUN apk add --no-cache \
 		--disable-swscale \
 		--disable-lsmash \
 	&& make install \
+	&& cd / \
+	&& rm -rf x264 \
 	\
 	&& hg clone http://hg.videolan.org/x265 \
 	&& cd x265/build \
@@ -88,12 +80,14 @@ RUN apk add --no-cache \
 		-DENABLE_CLI=OFF \
 		../source \
 	&& make install \
+	&& cd / \
+	&& rm -rf x265 \
 	\
 	&& cd / \
 	&& git clone --depth 1 https://github.com/FFmpeg/FFmpeg \
 	\
-	&& apk add --no-cache numactl-dev
-RUN cd /FFmpeg \
+	&& apk add --no-cache numactl-dev \
+	&& cd /FFmpeg \
 	&& LDFLAGS="-static" \
 		./configure \
 			--cc="$CC" \
@@ -127,7 +121,7 @@ RUN cd /FFmpeg \
 			--enable-libx265 \
 			--enable-libvpx \
 	&& make install \
-	\
-	\
+	&& cd / \
+	&& rm -rf FFmpeg \
 	\
 	&& curl -s https://raw.githubusercontent.com/dtschump/CImg/master/CImg.h > /usr/include/CImg.h
