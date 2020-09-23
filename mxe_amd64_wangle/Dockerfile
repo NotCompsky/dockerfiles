@@ -102,6 +102,11 @@ RUN cd /mxe \
 		-DBUILD_TESTS=OFF \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_EXE_LINKER_FLAGS=-static \
+		\
+		-DFOLLY_HAVE_UNALIGNED_ACCESS=1 \
+		-DFOLLY_HAVE_LINUX_VDSO=0 \
+		-DFOLLY_HAVE_WCHAR_SUPPORT=1 \
+		-DHAVE_VSNPRINTF_ERRORS=1 \
 	&& make install \
 	&& cd / \
 	&& rm -rf folly \
