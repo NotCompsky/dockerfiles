@@ -3,7 +3,17 @@ FROM notcompsky/mxe_amd64:latest
 # WARNING: -fpermissive for wangle is temporary.
 COPY static-connector.patch /static-connector.patch
 
-RUN cd /mxe \
+RUN apt install --no-install-recommends -y dosfstools \
+	\
+	&& cd /mxe \
+	\
+	&& dd if=/dev/zero of=/case_insensitive bs=1000 count=100000 \
+	&& mkfs.vfat /case_insensitive \
+	&& mkdir /mnt/case_insensitive \
+	&& mount /case_insensitive /mnt/case_insensitive \
+	&& mv /mxe/usr/x86_64-w64-mingw32.static/include /mnt/case_insensitive \
+	&& ln -s /mnt/case_insensitive/include /mxe/usr/x86_64-w64-mingw32.static/include \
+	\
 	&& make MXE_TARGETS=x86_64-w64-mingw32.static zlib lz4 openssl libsodium libevent curl zstd boost \
 	\
 	&& cd / \
