@@ -16,7 +16,6 @@ RUN cd /mxe \
 	&& git clone --depth 1 https://github.com/google/snappy \
 	&& git clone --depth 1 https://github.com/fmtlib/fmt \
 	&& git clone --depth 1 https://github.com/gflags/gflags \
-	&& git clone https://github.com/mariadb-corporation/mariadb-connector-c \
 	\
 	&& cd /libunwind \
 	&& ./autogen.sh \
@@ -98,7 +97,9 @@ RUN cd /mxe \
 	&& git clone --depth 1 https://github.com/facebook/folly \
 	&& git clone --depth 1 https://github.com/facebookincubator/fizz \
 	&& git clone --depth 1 https://github.com/facebook/wangle \
+	&& git clone https://github.com/mariadb-corporation/mariadb-connector-c \
 	\
+	&& cd /wangler \
 	&& cp -r /mxe/usr/x86_64-w64-mingw32.static/include /mxe/usr/x86_64-w64-mingw32.static/include.case_sensitive \
 	&& mv /mxe/usr/x86_64-w64-mingw32.static/include /wangler/include \
 	&& find /wangler -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -exec \
@@ -152,10 +153,7 @@ RUN cd /mxe \
 	&& cd / \
 	&& rm -rf /wangler/wangle \
 	\
-	&& rm -rf /wangler/include \
-	&& mv /mxe/usr/x86_64-w64-mingw32.static/include.case_sensitive /mxe/usr/x86_64-w64-mingw32.static/include \
-	\
-	&& cd /mariadb-connector-c \
+	&& cd /wangler/mariadb-connector-c \
 	&& for f in service_sha2; do \
 		curl -s "https://raw.githubusercontent.com/MariaDB/server/10.5/include/mysql/$f.h" > "include/mysql/$f.h"; \
 	done \
@@ -166,7 +164,6 @@ RUN cd /mxe \
 		-DWITH_MYSQLCOMPAT=ON \
 		-DWITH_UNIT_TESTS=OFF \
 		-DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_C_STANDARD_INCLUDE_DIRECTORIES=/server/include \
 		\
 		-DCLIENT_PLUGIN_CLIENT_ED25519=STATIC \
 		-DCLIENT_PLUGIN_CACHING_SHA2_PASSWORD=STATIC \
@@ -187,4 +184,7 @@ RUN cd /mxe \
 		. \
 	&& make install \
 	&& cd / \
-	&& rm -rf mariadb-connector-c
+	&& rm -rf /wangler/mariadb-connector-c \
+	\
+	&& rm -rf /wangler/include \
+	&& mv /mxe/usr/x86_64-w64-mingw32.static/include.case_sensitive /mxe/usr/x86_64-w64-mingw32.static/include
