@@ -3,16 +3,9 @@ FROM notcompsky/mxe_amd64:latest
 # WARNING: -fpermissive for wangle is temporary.
 COPY static-connector.patch /static-connector.patch
 
-RUN apt install --no-install-recommends -y dosfstools \
+RUN cd /mxe \
 	\
-	&& cd /mxe \
-	\
-	&& dd if=/dev/zero of=/case_insensitive bs=1000 count=100000 \
-	&& mkfs.vfat /case_insensitive \
-	&& mkdir /mnt/case_insensitive \
-	&& mount /case_insensitive /mnt/case_insensitive \
-	&& mv /mxe/usr/x86_64-w64-mingw32.static/include /mnt/case_insensitive \
-	&& ln -s /mnt/case_insensitive/include /mxe/usr/x86_64-w64-mingw32.static/include \
+	&& apt install -y --no-install-recommends rename \
 	\
 	&& make MXE_TARGETS=x86_64-w64-mingw32.static zlib lz4 openssl libsodium libevent curl zstd boost \
 	\
@@ -23,9 +16,6 @@ RUN apt install --no-install-recommends -y dosfstools \
 	&& git clone --depth 1 https://github.com/google/snappy \
 	&& git clone --depth 1 https://github.com/fmtlib/fmt \
 	&& git clone --depth 1 https://github.com/gflags/gflags \
-	&& git clone --depth 1 https://github.com/facebook/folly \
-	&& git clone --depth 1 https://github.com/facebookincubator/fizz \
-	&& git clone --depth 1 https://github.com/facebook/wangle \
 	&& git clone https://github.com/mariadb-corporation/mariadb-connector-c \
 	\
 	&& cd /libunwind \
@@ -103,7 +93,24 @@ RUN apt install --no-install-recommends -y dosfstools \
 	&& cd / \
 	&& rm -rf gflags \
 	\
-	&& cd /folly \
+	&& mkdir /wangler \
+	&& cd /wangler \
+	&& git clone --depth 1 https://github.com/facebook/folly \
+	&& git clone --depth 1 https://github.com/facebookincubator/fizz \
+	&& git clone --depth 1 https://github.com/facebook/wangle \
+	\
+	&& cp -r /mxe/usr/x86_64-w64-mingw32.static/include /mxe/usr/x86_64-w64-mingw32.static/include.case_sensitive \
+	&& mv /mxe/usr/x86_64-w64-mingw32.static/include /wangler/include \
+	&& find /wangler -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.cpp' \) -exec \
+		sed -i -E 's_(#include <(.*/)?)([^/]+[.]h>)_\1\L\3_g' {} \; \
+	&& echo 'echo "$(dirname "$1")/$(basename "$1" | tr [:upper:] [:lower:])"' > /usr/bin/path2lower \
+	&& echo 'mv "$1" "$(/usr/bin/path2lower "$1")"' > /usr/bin/rename2lower \
+	&& chmod +x /usr/bin/path2lower \
+	&& chmod +x /usr/bin/rename2lower \
+	&& find /wangler -type f \( -name '*.h' -o -name '*.hpp' \) -exec \
+		/usr/bin/rename2lower {} \; \
+	\
+	&& cd /wangler/folly \
 	&& sed -i 's/^add_subdirectory(folly)//g' CMakeLists.txt  \
 	&& mkdir _build \
 	&& cd _build \
@@ -118,11 +125,10 @@ RUN apt install --no-install-recommends -y dosfstools \
 		-DFOLLY_HAVE_WCHAR_SUPPORT=1 \
 		-DHAVE_VSNPRINTF_ERRORS=1 \
 	&& make install \
-	&& cd / \
-	&& rm -rf folly \
+	&& rm -rf /wangler/folly \
 	\
-	&& mkdir /fizz/build_ \
-	&& cd /fizz/build_ \
+	&& mkdir /wangler/fizz/build_ \
+	&& cd /wangler/fizz/build_ \
 	&& /mxe/usr/bin/${MXE_TARGETS}-cmake \
 		-Wno-dev \
 		-DBUILD_TESTS=OFF \
@@ -133,9 +139,9 @@ RUN apt install --no-install-recommends -y dosfstools \
 		../fizz \
 	&& make install \
 	&& cd / \
-	&& rm -rf fizz \
+	&& rm -rf /wangler/fizz \
 	\
-	&& cd /wangle/wangle \
+	&& cd /wangler/wangle/wangle \
 	&& /mxe/usr/bin/${MXE_TARGETS}-cmake \
 		-DCMAKE_CXX_FLAGS_RELEASE='-fpermissive' \
 		-Wno-dev -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF \
@@ -144,7 +150,10 @@ RUN apt install --no-install-recommends -y dosfstools \
 		. \
 	&& make install \
 	&& cd / \
-	&& rm -rf wangle \
+	&& rm -rf /wangler/wangle \
+	\
+	&& rm -rf /wangler/include \
+	&& mv /mxe/usr/x86_64-w64-mingw32.static/include.case_sensitive /mxe/usr/x86_64-w64-mingw32.static/include \
 	\
 	&& cd /mariadb-connector-c \
 	&& for f in service_sha2; do \
