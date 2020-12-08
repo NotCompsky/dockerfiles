@@ -20,30 +20,18 @@
 #SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-FROM alpine:3.12
+# This is a version of Python specifically designed to be embedded into tagem
+# It therefore does not include GUI or TUI libraries, such as tkinter, readline, curses
+# Other libraries are excluded as they are seemingly unlikely to be useful:
+#  bluez
 
-# ensure local python is preferred over distribution python
-ENV PATH /usr/local/bin:$PATH
 
-# http://bugs.python.org/issue19846
-# > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK.
-ENV LANG C.UTF-8
-
-# runtime dependencies
-RUN set -eux; \
-	apk add --no-cache \
-# install ca-certificates so that HTTPS works consistently
-		ca-certificates \
-# and tzdata for PEP 615 (https://www.python.org/dev/peps/pep-0615/)
-		tzdata \
-	;
-# other runtime dependencies for Python are installed later
+FROM notcompsky/static:latest
 
 ENV GPG_KEY E3FF2839C048B25C084DEBE9B26995E310250568
 ENV PYTHON_VERSION 3.9.0
 
-RUN set -ex \
-	&& apk add --no-cache --virtual .fetch-deps \
+RUN apk add --no-cache --virtual .fetch-deps \
 		gnupg \
 		tar \
 		xz \
@@ -59,29 +47,20 @@ RUN set -ex \
 	&& tar -xJC /usr/src/python --strip-components=1 -f python.tar.xz \
 	&& rm python.tar.xz \
 	\
-	&& apk add --no-cache --virtual .build-deps  \
-		bluez-dev \
+	&& apk add --no-cache --virtual .build-deps \
 		bzip2-dev \
-		coreutils \
-		dpkg-dev dpkg \
 		expat-dev \
 		findutils \
-		gcc \
 		gdbm-dev \
 		libc-dev \
 		libffi-dev \
 		libnsl-dev \
 		libtirpc-dev \
 		linux-headers \
-		make \
-		ncurses-dev \
 		openssl-dev \
 		pax-utils \
-		readline-dev \
 		sqlite-dev \
 		tcl-dev \
-		tk \
-		tk-dev \
 		util-linux-dev \
 		xz-dev \
 		zlib-dev \
@@ -89,35 +68,22 @@ RUN set -ex \
 	&& apk del --no-network .fetch-deps \
 	\
 	&& cd /usr/src/python \
-	&& gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
 	&& ./configure \
-		--build="$gnuArch" \
+		--build="x86_64-linux-gnu" \
 		--enable-loadable-sqlite-extensions \
 		--enable-optimizations \
 		--enable-option-checking=fatal \
-		--enable-shared \
+		--disable-shared \
+		--without-doc-strings \
+		--with-lto \
 		--with-system-expat \
 		--with-system-ffi \
-		--without-ensurepip \
+		--with-ensurepip=no \
 	&& make -j "$(nproc)" \
 # set thread stack size to 1MB so we don't segfault before we hit sys.getrecursionlimit()
 # https://github.com/alpinelinux/aports/commit/2026e1259422d4e0cf92391ca2d3844356c649d0
 		EXTRA_CFLAGS="-DTHREAD_STACK_SIZE=0x100000" \
-		LDFLAGS="-Wl,--strip-all" \
 	&& make install \
 	&& rm -rf /usr/src/python \
 	\
-	&& find /usr/local -depth \
-		\( \
-			\( -type d -a \( -name test -o -name tests -o -name idle_test \) \) \
-			-o \( -type f -a \( -name '*.pyc' -o -name '*.pyo' -o -name '*.a' \) \) \
-		\) -exec rm -rf '{}' + \
-	\
-	&& find /usr/local -type f -executable -not \( -name '*tkinter*' \) -exec scanelf --needed --nobanner --format '%n#p' '{}' ';' \
-		| tr ',' '\n' \
-		| sort -u \
-		| awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
-		| xargs -rt apk add --no-cache --virtual .python-rundeps \
-	&& apk del --no-network .build-deps \
-	\
-	&& python3 --version
+	&& find / -type f -name '*python*.a'
