@@ -12,8 +12,13 @@ RUN apk update \
 		curl gettext glib \
 		autoconf automake libtool perl \
 	\
+	&& mkdir /git \
+	&& cd /git \
+	\
 	&& git clone --depth 1 https://github.com/richfelker/musl-cross-make \
-	&& cd musl-cross-make \
+	&& git clone --depth 1 https://github.com/microsoft/mimalloc \
+	\
+	&& cd /git/musl-cross-make \
 	&& printf "%s\n%s\n%s\n%s\n" \
 		'TARGET = x86_64-linux-musl' \
 		'OUTPUT = /usr/local' \
@@ -21,12 +26,9 @@ RUN apk update \
 		'COMMON_CONFIG += --disable-nls CFLAGS="-g0 -O3 -flto" CXXFLAGS="-g0 -O3 -flto" LDFLAGS="-s"' \
 		> config.mak \
 	&& make install \
-	&& cd .. \
-	&& rm -rf musl-cross-make \
 	\
-	&& git clone --depth 1 https://github.com/microsoft/mimalloc \
-	&& mkdir mimalloc/build \
-	&& cd mimalloc/build \
+	&& mkdir /git/mimalloc/build \
+	&& cd /git/mimalloc/build \
 	&& cmake \
 		-DCMAKE_BUILD_TYPE=Release \
 		\
@@ -39,8 +41,8 @@ RUN apk update \
 		.. \
 	&& make \
 	&& mv ./CMakeFiles/mimalloc-obj.dir/src/static.c.o /mimalloc-override.o \
-	&& cd .. \
-	&& rm -rf mimalloc
+	\
+	&& rm -rf /git
 
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 ENV PATH=$PATH:/usr/local/x86_64-linux-musl/lib
