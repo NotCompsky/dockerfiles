@@ -1,4 +1,4 @@
-FROM notcompsky/static-wangle:latest
+FROM notcompsky/static-mariadb:latest
 
 #	&& git clone https://aomedia.googlesource.com/aom \
 #	&& mkdir aom/aom_build \
@@ -30,9 +30,17 @@ RUN apk add --no-cache \
 		yasm \
 		nasm \
 		diffutils \
+		numactl-dev \
+	\
+	&& mkdir /git \
+	&& cd /git \
 	\
 	&& git clone --depth 1 https://github.com/webmproject/libvpx \
-	&& cd libvpx/build \
+	&& git clone --depth 1 https://github.com/FFmpeg/FFmpeg \
+	&& git clone --depth 1 https://code.videolan.org/videolan/x264.git \
+	&& hg clone http://hg.videolan.org/x265 \
+	\
+	&& cd /git/libvpx/build \
 	&& LDFLAGS="-static" ../configure \
 		--disable-shared \
 		--enable-static \
@@ -50,11 +58,8 @@ RUN apk add --no-cache \
 		--enable-vp9-highbitdepth \
 		--as=yasm \
 	&& make install \
-	&& cd / \
-	&& rm -rf libvpx \
 	\
-	&& git clone --depth 1 https://code.videolan.org/videolan/x264.git \
-	&& cd x264 \
+	&& cd /git/x264 \
 	&& LDFLAGS="-static" ./configure \
 		--disable-cli \
 		--enable-static \
@@ -67,11 +72,8 @@ RUN apk add --no-cache \
 		--disable-swscale \
 		--disable-lsmash \
 	&& make install \
-	&& cd / \
-	&& rm -rf x264 \
 	\
-	&& hg clone http://hg.videolan.org/x265 \
-	&& cd x265/build \
+	&& cd /git/x265/build \
 	&& cmake \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DSTATIC_LINK_CRT=ON \
@@ -80,14 +82,8 @@ RUN apk add --no-cache \
 		-DENABLE_CLI=OFF \
 		../source \
 	&& make install \
-	&& cd / \
-	&& rm -rf x265 \
 	\
-	&& cd / \
-	&& git clone --depth 1 https://github.com/FFmpeg/FFmpeg \
-	\
-	&& apk add --no-cache numactl-dev \
-	&& cd /FFmpeg \
+	&& cd /git/FFmpeg \
 	&& LDFLAGS="-static" \
 		./configure \
 			--cc="$CC" \
@@ -121,7 +117,7 @@ RUN apk add --no-cache \
 			--enable-libx265 \
 			--enable-libvpx \
 	&& make install \
-	&& cd / \
-	&& rm -rf FFmpeg \
 	\
 	&& curl -s https://raw.githubusercontent.com/dtschump/CImg/master/CImg.h > /usr/include/CImg.h
+	\
+	&& rm -rf /git
