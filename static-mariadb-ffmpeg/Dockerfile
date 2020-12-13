@@ -23,6 +23,8 @@ FROM notcompsky/static-mariadb:latest
 # WARNING: Maybe remove enable-demuxer? Can't remember if I needed that removed to compile it
 # --enable-demuxer=mov,m4v,matroska,mp4 \
 
+ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig/:${PKG_CONFIG_PATH}"
+
 RUN apk add --no-cache \
 		bzip2-static \
 		expat-static \
