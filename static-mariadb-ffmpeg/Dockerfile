@@ -118,6 +118,6 @@ RUN apk add --no-cache \
 			--enable-libvpx \
 	&& make install \
 	\
-	&& curl -s https://raw.githubusercontent.com/dtschump/CImg/master/CImg.h > /usr/include/CImg.h
+	&& curl -s https://raw.githubusercontent.com/dtschump/CImg/master/CImg.h > /usr/include/CImg.h \
 	\
 	&& rm -rf /git
